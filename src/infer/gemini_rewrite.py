@@ -8,20 +8,21 @@
 # ===============================================================
 
 
-
 from ast import main
 from google import genai
 from google.genai import types
 import os
+from os import path as osp 
 import re
 import json
 from dotenv import load_dotenv
+import argparse
+from typing import Optional
 
 load_dotenv()   
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TARGET_FILE = os.path.join(ROOT_DIR, "data", "rewrite", "input", '20250706-老汤模型.txt')
-SAVE_FILE = os.path.join(ROOT_DIR, "data", "rewrite", "output", '20250706-老汤模型.output.txt')
+OUTPUT_PATH = os.path.join(ROOT_DIR, "data", "rewrite", "output")
 SYSTEM_PROMPT_PATH = os.path.join(ROOT_DIR, "prompts", "rewrite", "system_prompt.txt")
 USER_PROMPT_PATH = os.path.join(ROOT_DIR, "prompts", "rewrite", "user_prompt.txt")
 
@@ -128,7 +129,7 @@ def rewrite_content_with_gemini(content: str, system_prompt_path: str, user_prom
 
 def workflow_rewrite_content(
     input_file_path: str,
-    output_file_path: str,
+    output_file_path: Optional[str] = None,
     system_prompt_path: str = "prompts/rewrite/system_prompt.txt",
     user_prompt_path: str = "prompts/rewrite/user_prompt.txt"
 ) -> None:
@@ -141,8 +142,8 @@ def workflow_rewrite_content(
     3. 将重写结果保存到输出文件
     
     Args:
-        input_file_path: 输入文件路径
-        output_file_path: 输出文件路径
+        input_file_path: 输入文件路径，可以是相对于data/rewrite/input的路径，也可以是绝对路径
+        output_file_path: 输出文件路径，如果不指定则自动生成
         system_prompt_path: 系统提示词文件路径，默认为"prompts/rewrite/system_prompt.txt"
         user_prompt_path: 用户提示词文件路径，默认为"prompts/rewrite/user_prompt.txt"
         
@@ -155,8 +156,14 @@ def workflow_rewrite_content(
     """
     try:
         # 1. 读取输入文件内容
-        print(f"正在读取输入文件: {input_file_path}")
-        content = read_txt_file(input_file_path)
+        # 处理输入文件路径
+        if not osp.isabs(input_file_path):
+            _input_file_path = osp.join(ROOT_DIR, 'data', 'rewrite', 'input', input_file_path)
+        else:
+            _input_file_path = input_file_path
+            
+        print(f"正在读取输入文件: {_input_file_path}")
+        content = read_txt_file(_input_file_path)
         print(f"成功读取文件，内容长度: {len(content)} 字符")
         
         # 2. 调用Gemini API进行内容重写
@@ -170,6 +177,15 @@ def workflow_rewrite_content(
         print(f"重写后的内容长度: {len(rewritten_content)} 字符")
         
         # 3. 保存重写结果到输出文件
+        # 处理输出文件路径
+        if not output_file_path:
+            input_filename = osp.basename(input_file_path)
+            name, ext = osp.splitext(input_filename)
+            output_filename = f"{name}.output{ext}"
+            output_file_path = osp.join(OUTPUT_PATH, output_filename)
+        elif not osp.isabs(output_file_path):
+            output_file_path = osp.join(OUTPUT_PATH, output_file_path)
+            
         print(f"正在保存重写结果到: {output_file_path}")
         save_txt_file(output_file_path, rewritten_content)
         print("重写结果保存成功")
@@ -186,11 +202,23 @@ def workflow_rewrite_content(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='使用Gemini API重写文本内容')
+    parser.add_argument('--input', '-i', type=str, default='20250707-特征穿越.txt',
+                      help='输入文件路径')
+    parser.add_argument('--output', '-o', type=str,
+                      help='输出文件路径')
+    parser.add_argument('--system-prompt', '-s', type=str, default=SYSTEM_PROMPT_PATH,
+                      help='系统提示词文件路径')
+    parser.add_argument('--user-prompt', '-u', type=str, default=USER_PROMPT_PATH,
+                      help='用户提示词文件路径')
+    
+    args = parser.parse_args()
+    
     workflow_rewrite_content(
-        input_file_path=TARGET_FILE,
-        output_file_path=SAVE_FILE,
-        system_prompt_path=SYSTEM_PROMPT_PATH,
-        user_prompt_path=USER_PROMPT_PATH
+        input_file_path=args.input,
+        output_file_path=args.output,
+        system_prompt_path=args.system_prompt,
+        user_prompt_path=args.user_prompt
     )
 
 
