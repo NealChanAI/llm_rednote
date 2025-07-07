@@ -106,12 +106,14 @@ def rewrite_content_with_gemini(content: str, system_prompt_path: str, user_prom
         
         # 调用Gemini API
         response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
+            # model='gemini-2.0-flash-exp',
+            model='gemini-2.5-flash',
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 top_p=0,
                 temperature=0,
                 max_output_tokens=2048,
+                # thinking_config=types.ThinkingConfig(thinking_budget=1024),
             ),
             contents=user_prompt
         )

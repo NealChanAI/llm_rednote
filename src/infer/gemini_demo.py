@@ -42,7 +42,8 @@ user_prompt = user_prompt.replace('${CONTENT}', text)
 
 response = client.models.generate_content(
             # model='gemini-2.0-flash-thinking-exp-1219',
-            model='gemini-2.0-flash-exp',
+            # model='gemini-2.0-flash-exp',
+            model='gemini-2.5-flash',
             config=types.GenerateContentConfig(
                 system_instruction='你是一个资深的新闻摘要撰写专家，擅长为华语新闻撰写高质量的摘要(Abstractive Summary)',
                 top_p=0,
